@@ -2,6 +2,8 @@
 
 **Conducted:** 2026-08-27 10:58 (Asia/Saigon) · **Repo:** MTPlayer (empty, initial commit) · **Mode:** research + brainstorm
 
+> **Historical record — scope superseded.** This report explored the gaming-emulator class (BlueStacks/LDPlayer) before requirements R1-R3 were locked. Its ARM-translation analysis, MVP roadmap, and Option A/B/C comparison no longer describe the project. Canonical plan: [`../260827-1138-mtplayer-mvp/plan.md`](../260827-1138-mtplayer-mvp/plan.md). Retained for the vendor/licensing research and source links.
+
 ## Table of Contents
 1. [Executive Summary](#executive-summary)
 2. [Methodology](#methodology)

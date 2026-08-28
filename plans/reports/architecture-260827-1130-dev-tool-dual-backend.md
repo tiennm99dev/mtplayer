@@ -2,6 +2,8 @@
 
 **Date:** 2026-08-27 11:30 (Asia/Saigon) · **Supersedes scope in:** `research-260827-1058-android-emulator-windows.md`
 
+> **Decisions 1-3 still hold. Decision 4 (guest image) is superseded.** Bliss OS is now a spike-only target and ships nothing; v1 ships exactly one AOSP image (Android 13 / API 33), and AOSP image work moved from post-v1 into v1. The phase numbering here (P0-P5) has been expanded into 21 phases. Canonical plan: [`../260827-1138-mtplayer-mvp/plan.md`](../260827-1138-mtplayer-mvp/plan.md).
+
 ## Locked Requirements
 
 | # | Requirement | Consequence |
