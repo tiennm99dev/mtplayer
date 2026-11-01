@@ -1,0 +1,21 @@
+[package]
+name = "mtp-cli"
+description = "The mtp command-line tool."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "mtp"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+mtp-sdk = { path = "../mtp-sdk" }
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

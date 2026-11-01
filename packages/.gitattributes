@@ -1,0 +1,4 @@
+# The manifest pins the license text by hash, so line endings must never change on checkout.
+licenses/* -text
+manifest.json text eol=lf
+cargo-licenses.md text eol=lf

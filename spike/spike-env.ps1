@@ -4,11 +4,15 @@
 
 . (Join-Path $PSScriptRoot 'fetch-common.ps1')
 
+# Optional overrides for booting a product SDK root, which holds no adb. By default both
+# stay on the spike's own SDK under .tmp, and the override root is never written to.
+if ($env:MTP_SPIKE_SDK_DIR) { $script:SdkDir = $env:MTP_SPIKE_SDK_DIR }
+
 $script:AvdDir      = Join-Path $Tmp 'avd'
 $script:HomeRoot    = Join-Path $Tmp 'home'
 $script:EvidenceDir = Join-Path $Tmp 'evidence'
 $script:EmulatorExe = Join-Path $SdkDir 'emulator\emulator.exe'
-$script:AdbExe      = Join-Path $SdkDir 'platform-tools\adb.exe'
+$script:AdbExe      = if ($env:MTP_SPIKE_ADB_EXE) { $env:MTP_SPIKE_ADB_EXE } else { Join-Path $SdkDir 'platform-tools\adb.exe' }
 # Emulator temp dir (TMP/TEMP): discovery files (avd/running/pid_*.ini with the
 # gRPC token), crash db and netsimd artifacts land here instead of %TEMP%.
 $script:EmuTempDir  = Join-Path $Tmp 'tmp'

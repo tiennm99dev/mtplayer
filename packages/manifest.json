@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "set": "37.2.13-36r2-4d7268a-829c076",
+  "licenses": {
+    "android-sdk-license": {
+      "reviewed_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+      "reviewed_on": "2026-11-01"
+    },
+    "gpl-3.0": {
+      "file": "packages/licenses/gpl-3.0.txt",
+      "text_sha256": "589ed823e9a84c56feb95ac58e7cf384626b9cbf4fda2a907bc36e103de1bad2"
+    }
+  },
+  "packages": [
+    {
+      "path": "emulator",
+      "revision": "37.2.13",
+      "channel": "channel-0",
+      "license": "android-sdk-license",
+      "repository_xml": "https://dl.google.com/android/repository/repository2-3.xml",
+      "url": "https://dl.google.com/android/repository/emulator-windows_x64-16740729.zip",
+      "size": 455344678,
+      "sha1": "4d7268aa7787c640ad892844e6c9a5f159e91ad3",
+      "probe": "emulator.exe"
+    },
+    {
+      "path": "system-images;android-36;default;x86_64",
+      "revision": "2",
+      "channel": "channel-0",
+      "license": "android-sdk-license",
+      "repository_xml": "https://dl.google.com/android/repository/sys-img/android/sys-img2-3.xml",
+      "url": "https://dl.google.com/android/repository/sys-img/android/x86_64-36_r02.zip",
+      "size": 844217077,
+      "sha1": "829c076e8ff448a336097ae25a355b495ba36e2c",
+      "probe": "system.img"
+    }
+  ],
+  "magisk": {
+    "repo": "topjohnwu/Magisk",
+    "tag": "v31.1",
+    "license": "gpl-3.0",
+    "asset": "Magisk-v31.1.apk",
+    "url": "https://github.com/topjohnwu/Magisk/releases/download/v31.1/Magisk-v31.1.apk",
+    "size": 10679283,
+    "sha256": "89cefac0a318afa39fb3880c45c87b036c05bc1ebf02a7a715b7f8d7c26ac6e7",
+    "member": "lib/x86_64/libmagisk.so",
+    "binary_sha256": "19e7c1d37f9261828091377657f6d637f4ce6920fbf571374d08dfefc91ebd6f"
+  }
+}
