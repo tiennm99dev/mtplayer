@@ -1,84 +1,42 @@
 ---
 phase: 3
-title: "Engine build (3a) and patch series (3b)"
-status: pending
-priority: P1
-effort: "3a: 2 weeks, 3b: 4-8 weeks"
-dependencies: [1]
+title: "Own engine fork"
+status: deferred
+priority: P3
+effort: "later plan"
+dependencies: ["user-funded cloud build"]
 ---
 
-# Phase 3: Engine build (3a) and patch series (3b)
+# Phase 3: Own engine fork (deferred)
 
-## Goal
+## Why it is deferred
 
-Ship MTPlayer's own Windows engine, built from the base Phase 1 chose. 3a is
-an unmodified self-built engine, and it unblocks Phase 4. 3b adds a small,
-named patch series. It runs alongside Phases 4 and 5.
+On 2026-11-01 the user dropped all source builds. v1 uses Google's stock
+emulator and image instead ([session 4](plan.md#session-4-2026-11-01-image-re-plan)).
 
-## Where the fork lives
+An own engine fork would let MTPlayer patch hardware identifiers (IMEI,
+IMSI, MAC), brand the engine, and ship it. A license-clean own image would
+let it ship root and identity built into the image. Both need source builds
+of about 150-250 GB each, which only fit on a rented cloud VM.
 
-- The emulator source is a repo-manifest workspace with many repositories.
-  The fork therefore lives in its own repos under `tiennm99dev`:
-  - `mtplayer-engine`, the fork of `platform/external/qemu`;
-  - a goldfish fork, if the next-generation engine is the base;
-  - a manifest repo.
-- Each fork keeps upstream as a remote.
-- `mtplayer` keeps the daemon, CLI, GUI and image pipeline. The two talk only
-  through the engine's command line, console, gRPC and adb.
-- Licenses: the engine repos are GPLv2. MTPlayer's own code can stay
-  Apache-2.0, because the engine is a separate program. The user agreed to
-  relicense if that ever becomes necessary.
+## When to start it
 
-## 3a: unmodified build
+Start a separate plan when one of these is true, and the user approves the
+cloud cost:
 
-1. Script the Phase 1 build route.
-2. Produce a versioned engine zip, and a source tarball of exactly what was
-   built.
-3. Build on miti-b550 or a self-hosted runner, not on GitHub-hosted runners.
-4. **Verification:**
-   - the zip boots the Phase 2 image on both target hosts;
-   - the source tarball rebuilds the same binaries.
+- a needed identity field can't be changed on the stock emulator (Phase 1,
+  task 3);
+- MTPlayer has to ship its engine or image to people who won't accept the
+  Android SDK License themselves;
+- Google withdraws the pinned packages with no usable replacement.
 
-## 3b: patch series
+## Known facts for that plan
 
-Keep each item as a named patch so it can be re-based:
-
-- **Branding:** binaries, window titles and paths. There is no "Android" in
-  the product name.
-- **WHPX only:** it is the default, and the engine refuses HAXM and AEHD.
-- **Graphics:** gfxstream with `-gpu host` by default, and ANGLE
-  (`angle_indirect`) as a per-instance fallback.
-- **Per-instance identity:**
-  - MAC address;
-  - IMEI, IMSI, ICCID and phone number, where Phase 1 found the engine
-    serves them;
-  - GPS start position.
-
-  Serial and boot properties need no patch, because they use `androidboot.*`.
-- **Security defaults:** the console auth token and gRPC token
-  authentication are always on, and every port binds to `127.0.0.1`.
-
-Then:
-
-- Write a re-base runbook. For the classic base, the trigger is "MTPlayer
-  needs API 37".
-- Check once before the phase closes that the series applies cleanly to the
-  next upstream snapshot.
-
-## Verification
-
-- Two instances with different identity configs show different MAC
-  addresses and IMEI/IMSI.
-- `-gpu host` renders on the RTX 3060 and the GTX 1660, and a forced ANGLE
-  fallback renders too.
-- The engine starts while Docker Desktop and a WSL2 distro are running.
-- Console and gRPC calls without the token are refused.
-- **Exit gate:** every public engine release carries its complete
-  corresponding source, and the license inventory is updated.
-
-## Risks
-
-- **Upstream churn.** Keep the series small and track whichever engine
-  Google is investing in.
-- **IMEI handling depends on the engine base.** The fix lives in the classic
-  goldfish modem or in the new modem simulator, depending on the base.
+- The classic engine branch is `emu-main-dev`. `emu-master-dev` has been
+  frozen since 2025-03-27.
+- The next-generation engine (`emu-main-next-v11.0`) hands AVDs below API 37
+  to the classic engine and gives them no host GPU. For Android 16, the fork
+  base is the classic engine.
+- The Windows build route found by the cook workflow, including a stand-in
+  for the Windows ADK DISM API, is in the
+  [gate report](../reports/spike-261101-1629-image-and-engine-gates.md).

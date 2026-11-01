@@ -3,7 +3,7 @@ phase: 7
 title: "Packaging, performance and rollout"
 status: pending
 priority: P2
-effort: "3-4 weeks"
+effort: "2-3 weeks"
 dependencies: [5, 6]
 ---
 
@@ -17,12 +17,14 @@ the license paperwork. Then replace MuMuPlayer on the work PC.
 ## Tasks & Steps
 
 1. **Installer:**
-   - a per-user MSI or MSIX bundling the engine, daemon, GUI, CLI,
-     bundletool and the minimal JRE;
-   - images are downloaded or copied on first run;
+   - a per-user MSI or MSIX bundling the daemon, GUI, CLI, bundletool and
+     the minimal JRE;
+   - it bundles no Google or Magisk file. The first run goes through the
+     Phase 2 license gate and download;
    - it checks the `HypervisorPlatform` feature and prints the one command
      to enable it;
-   - uninstall removes the instance store only when the user confirms.
+   - uninstall removes the instance store and the private SDK root only when
+     the user confirms.
 2. **Performance tuning.** Re-run the Phase 1 benchmark set on miti-b550 and
    tiennm5-pc. Tune the defaults (cores, RAM, ANGLE versus host, Quick Boot)
    until acceptance criteria 1-3 pass. On tiennm5-pc, set
@@ -30,9 +32,9 @@ the license paperwork. Then replace MuMuPlayer on the work PC.
    instances running.
 3. **GPU driver list.** Record the known-good NVIDIA drivers for the RTX 3060
    and GTX 1660, and note the ANGLE fallback.
-4. **License notices.** The inventory and the source shipping were settled
-   at the Phase 2 and 3 exit gates. Here, add the NOTICE file to the
-   installer and check that every bundled component is listed.
+4. **License notices.** Add the NOTICE file to the installer. Check that
+   every bundled component is listed, and that `LICENSES.md` names the
+   packages the user downloads and accepts separately.
 5. **Rollout:**
    - install on tiennm5-pc;
    - test a real work app;
@@ -40,9 +42,12 @@ the license paperwork. Then replace MuMuPlayer on the work PC.
    - update `D:/docs/about-me/work.md` and the machine files in
      `.claude/rules/machines/`.
 6. **Docs:** a README in the project repo covering:
-   - install and the CLI;
-   - image re-pins and engine re-bases;
-   - the x86_64-only limitation;
+   - install, the license acceptance and the CLI;
+   - package re-pins;
+   - the x86_64-only limitation, and any identity fields that stay fixed;
+   - the license rules: MTPlayer ships no Google file, and spoofing is for
+     testing your own apps, not for getting around third-party anti-fraud
+     systems;
    - the residual threat: any local process on the host has root on every
      instance.
 

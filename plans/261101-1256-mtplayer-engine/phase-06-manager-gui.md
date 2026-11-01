@@ -20,7 +20,7 @@ multi-instance managers do for app testing. It talks only to the daemon.
   usage per instance.
 - **Actions:** create, clone, edit identity, start, stop, delete and snapshot,
   each for one instance or for a selected group.
-- **Display:** each instance's screen stays in the engine's own native
+- **Display:** each instance's screen stays in the emulator's own native
   window. The manager does not embed or stream the screen. It offers window
   arrangement: tile and cascade.
 - **Sync input:** one leader instance's touch and keys are copied to selected
@@ -33,7 +33,7 @@ multi-instance managers do for app testing. It talks only to the daemon.
   - screenshot and recording;
   - a file browser;
   - GPS, network, battery and sensor controls.
-- **Root toggle** and identity fields in the instance settings.
+- **Identity fields** in the instance settings.
 
 ## Tasks & Steps
 

@@ -4,7 +4,7 @@ title: "Instance daemon and CLI"
 status: pending
 priority: P1
 effort: "4-6 weeks"
-dependencies: [2, "3a"]
+dependencies: [2]
 ---
 
 # Phase 4: Instance daemon and CLI
@@ -12,7 +12,7 @@ dependencies: [2, "3a"]
 ## Goal
 
 One Rust daemon owns every instance, with a gRPC API and a CLI on top. The
-GUI and scripts never start engine processes themselves.
+GUI and scripts never start emulator processes themselves.
 
 ## Requirements
 
@@ -32,21 +32,29 @@ GUI and scripts never start engine processes themselves.
   because that would restore the other instance's identity.
 - **Instance store** under `%LOCALAPPDATA%\MTPlayer\`:
   - one generated AVD directory per instance (`config.ini`,
-    `hardware-qemu.ini`), with `ANDROID_AVD_HOME` and `ANDROID_EMULATOR_HOME`
-    set for every engine process;
+    `hardware-qemu.ini`), with `ANDROID_AVD_HOME`, `ANDROID_EMULATOR_HOME`
+    and `ANDROID_SDK_ROOT` set for every emulator process;
+  - the SDK root is Phase 2's private one;
   - nothing is written to the user's default Android SDK home folder.
 - **Lifecycle:** create, clone (fresh or full), start, stop, restart, delete,
   and snapshot save/load, with batch forms (`--all`, `--group`).
-- **Clone** creates a new serial, MAC address, IMEI, IMSI and phone number.
-  - A full clone runs the Phase 2 provisioning boot to reset the Android ID.
-  - On rooted instances, model and brand come from the Magisk identity
-    module, with values copied or overridden.
-  - Unrooted instances use their image profile.
+- **Identity at runtime,** using only the mechanisms Phase 1 proved:
+  - emulator flags and boot properties at start;
+  - after boot, `magisk resetprop` as root from `/data/local/tmp` for the
+    rest, then a framework restart before the instance is reported ready;
+  - each instance's values (model, brand, device, fingerprint, serial, and
+    whichever telephony and network fields Phase 1 proved) live in its
+    config. No Google file is changed.
+- **Clone** creates new identity values, copied or overridden.
+  - A fresh clone starts from the base `userdata` and gets a new Android ID.
+  - A full clone copies the overlay, then runs a provisioning boot (headless,
+    no network) that deletes `/data/system/users/0/settings_ssaid.xml` as
+    root and reboots.
 - **Resources:**
-  - RAM and core count are set with the engine's `-memory` and `-cores`.
-  - A Job Object per engine process limits only the CPU rate and handles
+  - RAM and core count are set with the emulator's `-memory` and `-cores`.
+  - A Job Object per emulator process limits only the CPU rate and handles
     orphan cleanup. It never caps memory, because a limit below `-memory`
-    kills the engine.
+    kills the emulator.
 - **Ports:**
   - fixed per instance index: console 5554+2n, adb 5555+2n, gRPC base+n;
   - bound to `127.0.0.1` only, and checked before start;
@@ -58,19 +66,19 @@ GUI and scripts never start engine processes themselves.
     creation time, ports), and stops any it can't verify through the process
     handle;
   - it never leaves orphans after `stop --all`.
-- **Root toggle:** choose the base or Magisk ramdisk per instance.
 
 ## Tasks & Steps
 
 1. Define the gRPC API (`proto/instances.proto`) and the CLI command tree,
    then implement them.
-2. Implement the store, the AVD-directory generator, and an image-version
-   registry that reads the Phase 2 manifest.
-3. Implement the engine launcher, which turns an instance config into engine
-   flags, `androidboot.*` values, tokens and environment variables.
+2. Implement the store, the AVD-directory generator, and a package registry
+   that reads the Phase 2 store.
+3. Implement the launcher. It turns an instance config into emulator flags,
+   boot properties, tokens and environment variables, and applies the
+   runtime identity after boot.
 4. Write the core of the `mtp-adb` crate, which speaks the ADB device
-   protocol to the guest: connection, auth and shell. The boot-ready check
-   and the provisioning boot use it; Phase 5 extends it.
+   protocol to the guest: connection, auth and shell. The boot-ready check,
+   the runtime identity and the provisioning boot use it; Phase 5 extends it.
 5. Write integration tests that boot real instances:
    - create, then a fresh clone and a full clone;
    - start four;
@@ -80,12 +88,12 @@ GUI and scripts never start engine processes themselves.
 
 ## Verification
 
-- `mtp create a; mtp clone a b; mtp start a b` gives two adb serials, two
-  Android IDs and two IMEIs.
-- After a restart, a persistent instance keeps its app data. An ephemeral
-  instance keeps nothing.
-- After `mtp stop --all`, `netstat -ano` shows no engine ports and no engine
-  processes are left.
+- `mtp create a; mtp clone a b; mtp start a b` gives two adb ports, two
+  Android IDs, and two different `Build.MODEL` values in a test app.
+- After a restart, a persistent instance keeps its app data and identity. An
+  ephemeral instance keeps nothing.
+- After `mtp stop --all`, `netstat -ano` shows no emulator ports and no
+  emulator processes are left.
 - If the daemon is killed while instances run, it reattaches to them when it
   restarts.
 - An adb connection from a second machine on the LAN fails.
@@ -95,3 +103,6 @@ GUI and scripts never start engine processes themselves.
 
 - **Port collisions** with a stock AVD or MuMu on the same host. Detect them
   and report the owner; never pick a random port.
+- **An app that starts before the identity is applied** sees the stock
+  values. The daemon reports an instance ready only after the framework
+  restart, and Phase 1 measures what that costs in boot time.
