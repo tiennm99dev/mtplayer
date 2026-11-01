@@ -1,0 +1,13 @@
+{
+  "model": "MTP-Model-B",
+  "brand": "MTPBrand",
+  "device": "mtpdevb",
+  "manufacturer": "MTPMaker",
+  "name": "mtpdevb",
+  "fingerprint": "MTPBrand/mtpdevb/mtpdevb:16/MTP1.000/0002:user/release-keys",
+  "serialno": "MTPB00000001",
+  "deviceName": "MTP-Model-B",
+  "props": {
+    "ro.build.id": "MTP1.000"
+  }
+}

@@ -9,6 +9,22 @@ dependencies: []
 
 # Phase 1: Feasibility spike and gates
 
+## Status
+
+As of 2026-11-01, see the
+[spike report](../reports/spike-261101-1700-stock-emulator-gates.md).
+
+| Task | Status | Note |
+| --- | --- | --- |
+| 1. Package pin | done | Pins are in `spike/packages.pin.json`. The license hash is a text-change detector, not proven to be Google's format. |
+| 2. Boot and isolation | done | The console token is per Windows user and `adb.exe` writes to `%USERPROFILE%\.android`; both are stock limits. Not yet measured with WSL2 and Docker running. |
+| 3. Identity proofs | done | `resetprop` reaches apps. The IMEI is fixed and the MAC address is partial. |
+| 4. Multi-instance | done | Four instances ran at once on miti-b550. |
+| 5. Baseline benchmarks | pending-user | The MuMu baseline needs the user's reboot with Hyper-V off. |
+| 6. ABI check | pending-user | Needs the user's work APKs. |
+| 7. License inventory | done | First version of [`LICENSES.md`](../../LICENSES.md). |
+| 8. Go/no-go | partial | The review says GO for Phase 2. Six questions in the report wait for the user. |
+
 ## Goal
 
 Before any large investment, prove that Google's stock emulator and the
@@ -95,8 +111,8 @@ Every proof runs on the stock packages, with no file of theirs changed.
 ## Files to create
 
 - `plans/reports/benchmark-<date>-emulator-baseline.md`
-- `plans/reports/spike-<date>-stock-emulator-gates.md`: the pins, proofs and
-  their evidence
+- `plans/reports/spike-261101-1700-stock-emulator-gates.md`: the pins, proofs
+  and their evidence
 - `LICENSES.md` (first version)
 - `spike/` scripts that reproduce each proof from an empty `.tmp/`
 

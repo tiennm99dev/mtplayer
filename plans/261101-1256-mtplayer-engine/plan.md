@@ -164,7 +164,7 @@ Android", and testing apps is part of that.
 
 | # | Phase | Status | Effort | Depends on |
 | --- | --- | --- | --- | --- |
-| 1 | [Feasibility spike and gates](phase-01-feasibility-spike-and-gates.md) | in progress | 2-3 weeks | none |
+| 1 | [Feasibility spike and gates](phase-01-feasibility-spike-and-gates.md) | in progress: tasks 1-4 and 7 done, review says go for Phase 2; tasks 5-6 and decisions pending the user | 2-3 weeks | none |
 | 2 | [Google package provisioning](phase-02-google-package-provisioning.md) | pending | 2-3 weeks | 1 |
 | 3 | [Own engine fork](phase-03-engine-fork.md) | deferred | later plan | user-funded cloud build |
 | 4 | [Instance daemon and CLI](phase-04-instance-daemon-and-cli.md) | pending | 4-6 weeks | 2 |
@@ -224,6 +224,7 @@ For one developer, the phases run in order: 1, 2, 4, 5, 6, 7. They sum to
 - [Fable review of this plan, 2026-11-01](../reports/review-261101-1408-mtplayer-engine-plan.md)
 - [Image and engine gates, 2026-11-01](../reports/spike-261101-1629-image-and-engine-gates.md)
 - [License research: Google sources and community precedent](../reports/research-261101-1652-android-sdk-license-for-mtplayer.md)
+- [Stock emulator gates (Phase 1 spike), 2026-11-01](../reports/spike-261101-1700-stock-emulator-gates.md)
 - [Android SDK License](https://developer.android.com/studio/terms), §3.1,
   §3.2, §3.4 and §3.5.
 - The superseded MTPlayer MVP plan and its research stay in git history

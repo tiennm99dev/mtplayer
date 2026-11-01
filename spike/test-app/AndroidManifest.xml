@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spike-only test app: prints the identity an ordinary app sees. Never shipped. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="dev.mtplayer.spiketest"
+    android:versionCode="1"
+    android:versionName="1">
+    <uses-sdk android:minSdkVersion="36" android:targetSdkVersion="36" />
+    <application android:label="MTP spike test" android:allowBackup="false">
+        <activity android:name=".MainActivity" android:exported="true" />
+    </application>
+</manifest>

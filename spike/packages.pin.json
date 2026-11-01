@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "licenses": {
+    "android-sdk-license": {
+      "sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83"
+    }
+  },
+  "packages": [
+    {
+      "path": "emulator",
+      "revision": "37.2.13",
+      "channel": "channel-0",
+      "license": "android-sdk-license",
+      "xml": "https://dl.google.com/android/repository/repository2-3.xml",
+      "url": "https://dl.google.com/android/repository/emulator-windows_x64-16740729.zip",
+      "size": 455344678,
+      "sha1": "4d7268aa7787c640ad892844e6c9a5f159e91ad3"
+    },
+    {
+      "path": "platform-tools",
+      "revision": "37.0.1",
+      "channel": "channel-0",
+      "license": "android-sdk-license",
+      "xml": "https://dl.google.com/android/repository/repository2-3.xml",
+      "url": "https://dl.google.com/android/repository/platform-tools_r37.0.1-win.zip",
+      "size": 8044989,
+      "sha1": "e03e78b1d80b396f1c3358e31251cb31740e1110"
+    },
+    {
+      "path": "system-images;android-36;default;x86_64",
+      "revision": "2",
+      "channel": "channel-0",
+      "license": "android-sdk-license",
+      "xml": "https://dl.google.com/android/repository/sys-img/android/sys-img2-3.xml",
+      "url": "https://dl.google.com/android/repository/sys-img/android/x86_64-36_r02.zip",
+      "size": 844217077,
+      "sha1": "829c076e8ff448a336097ae25a355b495ba36e2c"
+    },
+    {
+      "path": "build-tools;36.1.0",
+      "revision": "36.1.0",
+      "channel": "channel-0",
+      "license": "android-sdk-license",
+      "xml": "https://dl.google.com/android/repository/repository2-3.xml",
+      "url": "https://dl.google.com/android/repository/build-tools_r36.1_windows.zip",
+      "size": 59366211,
+      "sha1": "95f048ae758dad90617975fe3f787f038b03338c"
+    },
+    {
+      "path": "platforms;android-36",
+      "revision": "2",
+      "channel": "channel-0",
+      "license": "android-sdk-license",
+      "xml": "https://dl.google.com/android/repository/repository2-3.xml",
+      "url": "https://dl.google.com/android/repository/platform-36_r02.zip",
+      "size": 65878410,
+      "sha1": "2c1a80dd4d9f7d0e6dd336ec603d9b5c55a6f576"
+    }
+  ],
+  "magisk": {
+    "repo": "topjohnwu/Magisk",
+    "tag": "v31.1",
+    "license": "GPL-3.0",
+    "asset": "Magisk-v31.1.apk",
+    "url": "https://github.com/topjohnwu/Magisk/releases/download/v31.1/Magisk-v31.1.apk",
+    "size": 10679283,
+    "sha256": "89cefac0a318afa39fb3880c45c87b036c05bc1ebf02a7a715b7f8d7c26ac6e7",
+    "member": "lib/x86_64/libmagisk.so",
+    "binarySha256": "19e7c1d37f9261828091377657f6d637f4ce6920fbf571374d08dfefc91ebd6f"
+  }
+}
