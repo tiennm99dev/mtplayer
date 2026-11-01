@@ -25,7 +25,8 @@ multi-instance managers do for app testing. It talks only to the daemon.
   arrangement: tile and cascade.
 - **Sync input:** one leader instance's touch and keys are copied to selected
   followers as normalised coordinates sent through the virtual input device
-  (gRPC input injection), not `adb shell input`.
+  (gRPC input injection), not `adb shell input`. This is best-effort: it
+  stays correct only while the followers show the same UI as the leader.
 - **Tool panels:**
   - drag-and-drop install for APK, AAB and XAPK;
   - a logcat viewer;

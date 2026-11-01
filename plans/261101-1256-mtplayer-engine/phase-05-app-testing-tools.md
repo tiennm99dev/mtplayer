@@ -57,15 +57,18 @@ commands, so that the GUI (Phase 6) and CI scripts share them.
 
 1. Add the tool services to the daemon API and add the CLI subcommands.
 2. Extend the Phase 4 `mtp-adb` crate with the sync sub-protocol, install
-   sessions and logcat streaming, and test each against a real guest. Bundle
-   bundletool (Apache-2.0).
-3. Write an integration test per tool against a running instance.
+   sessions and logcat streaming, and test each against a real guest.
+3. Bundle bundletool (Apache-2.0) with a minimal OpenJDK runtime made with
+   `jlink` (GPLv2 with Classpath Exception; add it to the license
+   inventory). The JRE is used only for AAB installs, and the device spec
+   comes from `getprop` over `mtp-adb`.
+4. Write an integration test per tool against a running instance.
 
 ## Verification
 
 - Each tool works on two instances at once from one CLI call.
 - An AAB built by `bundletool` from a sample app installs and launches.
 - An injected GPS fix shows up in `dumpsys location`.
-- Everything above works on a host with no Android SDK or `adb.exe`
-  installed.
+- Everything above works on a host with no Android SDK, `adb.exe` or system
+  Java installed.
 - An ARM-only APK is refused with a message that names its ABIs.

@@ -1,66 +1,84 @@
 ---
 phase: 3
-title: "Engine fork"
+title: "Engine build (3a) and patch series (3b)"
 status: pending
 priority: P1
-effort: "6-10 weeks"
+effort: "3a: 2 weeks, 3b: 4-8 weeks"
 dependencies: [1]
 ---
 
-# Phase 3: Engine fork
+# Phase 3: Engine build (3a) and patch series (3b)
 
 ## Goal
 
-Ship our own engine binary for Windows, built from AEMU source with the base
-chosen in Phase 1. It should run on WHPX only, with gfxstream graphics and a
-per-instance identity, and carry as few patches as possible.
+Ship MTPlayer's own Windows engine, built from the base Phase 1 chose. 3a is
+an unmodified self-built engine, and it unblocks Phase 4. 3b adds a small,
+named patch series. It runs alongside Phases 4 and 5.
 
-## Requirements
+## Where the fork lives
 
-- Rebrand the binaries, window titles and paths. There is no "Android" in the
-  product name.
-- WHPX is the default and only accelerator. The engine refuses to start on
-  HAXM or AEHD.
-- gfxstream with `-gpu host` by default, and ANGLE (`angle_indirect`) as the
-  fallback for driver bugs. The engine picks the mode from a per-instance
-  config value.
-- Per-instance identity, passed through from the instance config to the
-  guest:
-  - boot properties for model, brand, fingerprint and serial;
+- The emulator source is a repo-manifest workspace with many repositories.
+  The fork therefore lives in its own repos under `tiennm99dev`:
+  - `mtplayer-engine`, the fork of `platform/external/qemu`;
+  - a goldfish fork, if the next-generation engine is the base;
+  - a manifest repo.
+- Each fork keeps upstream as a remote.
+- `mtplayer` keeps the daemon, CLI, GUI and image pipeline. The two talk only
+  through the engine's command line, console, gRPC and adb.
+- Licenses: the engine repos are GPLv2. MTPlayer's own code can stay
+  Apache-2.0, because the engine is a separate program. The user agreed to
+  relicense if that ever becomes necessary.
+
+## 3a: unmodified build
+
+1. Script the Phase 1 build route.
+2. Produce a versioned engine zip, and a source tarball of exactly what was
+   built.
+3. Build on miti-b550 or a self-hosted runner, not on GitHub-hosted runners.
+4. **Verification:**
+   - the zip boots the Phase 2 image on both target hosts;
+   - the source tarball rebuilds the same binaries.
+
+## 3b: patch series
+
+Keep each item as a named patch so it can be re-based:
+
+- **Branding:** binaries, window titles and paths. There is no "Android" in
+  the product name.
+- **WHPX only:** it is the default, and the engine refuses HAXM and AEHD.
+- **Graphics:** gfxstream with `-gpu host` by default, and ANGLE
+  (`angle_indirect`) as a per-instance fallback.
+- **Per-instance identity:**
   - MAC address;
-  - modem identity (IMEI, IMSI, ICCID and phone number) in AEMU's telephony
-    modem;
-  - the GPS start position.
-- Keep the multi-instance features AEMU already has: `-read-only` instances
-  sharing a copy-on-write Quick Boot snapshot, qcow2 overlays, the console and
-  adb port pair per instance, the gRPC control endpoint, and the inter-AVD
-  network stack.
+  - IMEI, IMSI, ICCID and phone number, where Phase 1 found the engine
+    serves them;
+  - GPS start position.
 
-## Tasks & Steps
+  Serial and boot properties need no patch, because they use `androidboot.*`.
+- **Security defaults:** the console auth token and gRPC token
+  authentication are always on, and every port binds to `127.0.0.1`.
 
-1. Set up the fork in the project repo with upstream as a remote. Keep every
-   change as a named patch series: branding, identity, defaults.
-2. Add the identity plumbing above. Prefer existing AEMU flags and console
-   commands over new code.
-3. Set up CI: build the Windows binaries with the Phase 1 build route, on
-   GitHub Actions or the build host, and produce a versioned zip.
-4. Write a re-base runbook covering upstream releases and the move to the
-   QEMU 11 engine.
+Then:
+
+- Write a re-base runbook. For the classic base, the trigger is "MTPlayer
+  needs API 37".
+- Check once before the phase closes that the series applies cleanly to the
+  next upstream snapshot.
 
 ## Verification
 
-- Two instances started with different identity configs show different
-  IMEI/IMSI (`adb shell service call iphonesubinfo` or the dialer `*#06#`),
-  MAC address and model.
-- `-gpu host` renders on the RTX 3060 and the GTX 1660. A forced ANGLE
-  fallback also renders.
+- Two instances with different identity configs show different MAC
+  addresses and IMEI/IMSI.
+- `-gpu host` renders on the RTX 3060 and the GTX 1660, and a forced ANGLE
+  fallback renders too.
 - The engine starts while Docker Desktop and a WSL2 distro are running.
-- The patch series applies cleanly to the next upstream tag. Check this once
-  before the phase closes.
+- Console and gRPC calls without the token are refused.
+- **Exit gate:** every public engine release carries its complete
+  corresponding source, and the license inventory is updated.
 
 ## Risks
 
-- Google may retire the classic engine. Keep the patch series small and
-  track upstream's next-generation engine.
-- GPLv2: internal use does not trigger distribution duties, but keep the
-  source and the build scripts in the repo so the tool can be handed on.
+- **Upstream churn.** Keep the series small and track whichever engine
+  Google is investing in.
+- **IMEI handling depends on the engine base.** The fix lives in the classic
+  goldfish modem or in the new modem simulator, depending on the base.
