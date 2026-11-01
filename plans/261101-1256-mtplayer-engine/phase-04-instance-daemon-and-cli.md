@@ -24,7 +24,9 @@ The GUI and scripts never start engine processes themselves.
 - **Lifecycle:** create, clone, start, stop, restart, delete, and snapshot
   save/load, with batch forms (`--all`, `--group`).
 - **Clone** creates a new Android ID seed, serial, MAC address, IMEI, IMSI and
-  phone number. Model and brand are copied unless they are overridden.
+  phone number. Model and brand are copied unless they are overridden. The
+  identity overlay or Magisk module comes from the Phase 2 `identity` tool.
+  The Android ID is reset over root adb before the clone's first boot.
 - **Resources:** a CPU, RAM and disk cap per instance, enforced through a
   Windows Job Object per engine process. Ports are fixed per instance index
   (console 5554+2n, adb 5555+2n, gRPC base+n), bind to `127.0.0.1` only, and
@@ -42,7 +44,10 @@ The GUI and scripts never start engine processes themselves.
    artifacts.
 3. Implement the engine launcher, which turns an instance config into engine
    flags and identity inputs.
-4. Write integration tests that boot real instances: create, clone, start
+4. Write the core of the `mtp-adb` crate, which speaks the ADB device
+   protocol to the guest: connection, auth and shell. Clone and boot-ready
+   checks use it; Phase 5 extends it with sync, install and logcat.
+5. Write integration tests that boot real instances: create, clone, start
    four, stop all, and confirm there are no leftover processes or ports.
 
 ## Verification

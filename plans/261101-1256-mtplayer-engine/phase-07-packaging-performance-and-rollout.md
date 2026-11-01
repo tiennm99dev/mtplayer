@@ -18,7 +18,7 @@ the license paperwork. Then replace MuMuPlayer on the work PC.
 
 1. **Installer:**
    - a per-user MSI or MSIX bundling the engine, daemon, GUI, CLI and
-     the self-built adb and bundletool;
+     bundletool;
    - images are downloaded or copied on first run;
    - it checks the `HypervisorPlatform` feature and prints the one command
      to enable it;
@@ -42,7 +42,7 @@ the license paperwork. Then replace MuMuPlayer on the work PC.
 ## Verification
 
 - Acceptance criteria 1-9 in [plan.md](plan.md#acceptance-criteria) all pass.
-  Record the results in `D:/plans/reports/benchmark-<date>-emulator-final.md`.
+  Record the results in `plans/reports/benchmark-<date>-emulator-final.md`.
 - Install, uninstall and reinstall on tiennm5-pc leaves no orphan processes,
   ports or services.
 

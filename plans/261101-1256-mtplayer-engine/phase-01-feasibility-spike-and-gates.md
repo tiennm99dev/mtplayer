@@ -31,21 +31,31 @@ v1 is x86_64 only.
    - Record a benchmark set for both the AVD and MuMuPlayer: GPU score
      (GFXBench or 3DMark Wild Life), cold-start time for a reference app,
      guest `fio` 4K random read/write, cold boot, and Quick Boot.
-   - Save the numbers to `D:/plans/reports/benchmark-<date>-emulator-baseline.md`.
+   - Save the numbers to `plans/reports/benchmark-<date>-emulator-baseline.md`.
 2. **Build route.**
    - Build AEMU from `platform/external/qemu` (the emu-master-dev branch or
      the latest release tag) for Windows.
    - Try the documented Linux `--mingw` cross-build in WSL2 first, then the
      native `cmake.py` clang-cl build.
-   - Record which one works and how long it takes.
-3. **Image route.**
-   - Build AOSP `sdk_phone_x86_64` userdebug from `android-latest-release`
-     with `m emu_img_zip`.
-   - Pick the build host: miti-x600, or WSL2 on miti-b550 C: (NVMe).
-     Use a shallow sync (`repo sync -c --depth=1`), which needs about
-     250 GB; a full sync needs about 400 GB. Base the choice on disk space
-     and RAM.
-   - Boot the image in the self-built engine on WHPX.
+   - Record which one works, how long it takes, and how much disk the
+     checkout and build use. The emulator source pulls its own prebuilt
+     toolchains under `prebuilts/android-emulator-build/`, and no size figure
+     was found during research.
+3. **Image route (no AOSP build).**
+   - Find a ci.android.com build ID that publishes an Android 16
+     `sdk_phone64_x86_64` userdebug `emu_img_zip`. This is the first gate:
+     do it on day one.
+   - Check the artifact for license or usage terms beyond AOSP's own.
+   - Boot the image unchanged in the self-built engine on WHPX.
+   - Prove each identity mechanism from
+     [Phase 2](phase-02-guest-image-pipeline.md#requirements) on one
+     instance:
+     - `androidboot.serialno` on the kernel command line;
+     - Magisk `resetprop`;
+     - a patched vendor `build.prop` with AVB turned off.
+   - Fallback if no Android 16 image is published: one build of
+     `sdk_phone64_x86_64` on a rented cloud VM (about 250 GB of disk for a
+     few hours). Record the cost.
 4. **Engine base.**
    - Look for the source of the QEMU 11 next-generation engine.
    - If it is public and builds for Windows with gfxstream, prefer it.
@@ -65,8 +75,8 @@ v1 is x86_64 only.
 
 ## Files to create
 
-- `D:/plans/reports/benchmark-<date>-emulator-baseline.md`
-- `D:/plans/reports/spike-<date>-emulator-engine-gates.md`, recording the
+- `plans/reports/benchmark-<date>-emulator-baseline.md`
+- `plans/reports/spike-<date>-emulator-engine-gates.md`, recording the
   decisions and build logs
 - In `tiennm99dev/mtplayer`: an `engine/` folder for the GPLv2 fork, with its
   own COPYING file, and a `spike/` folder for the build scripts.

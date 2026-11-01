@@ -3,64 +3,93 @@ phase: 2
 title: "Guest image pipeline"
 status: pending
 priority: P1
-effort: "4-6 weeks"
+effort: "3-5 weeks"
 dependencies: [1]
 ---
 
 # Phase 2: Guest image pipeline
 
+<!-- Updated: Validation Session 2 - prebuilt CI images plus host-side repack replace the own AOSP build -->
+
 ## Goal
 
-Build reproducible AOSP x86_64 userdebug images that read their identity from
-the engine at boot. Root and microG are build variants.
+Turn a pinned, prebuilt AOSP emulator image into MTPlayer's guest images
+without building AOSP. Root, microG and per-instance identity are added by
+patching on the host, so the pipeline needs only a few GB of disk.
 
 ## Requirements
 
-- Base: AOSP `sdk_phone_x86_64` on Android 16 (API 36). Pin an
-  `android-16.0.0_rNN` tag. Never use a moving branch: `android-latest-release`
-  already tracks Android 17.
-- An identity init service, run as an early `init.rc` service, copies
-  boot-time properties into `ro.product.*`, `ro.build.fingerprint`,
-  `ro.serialno` and the Android ID seed:
-  - **Inputs:** the engine passes boot-time properties (`qemu.*` / `-prop`
-    values).
-  - **Unverified:** the order in which property overrides apply, and where
-    the Android ID is stored. Confirm both in AOSP source before writing the
-    service.
-- Root: userdebug gives `adb root` everywhere. A second boot ramdisk patched
-  with Magisk (GPL-3) is chosen per instance at boot.
-- microG (Apache-2.0) is an opt-in build variant. The default image has no
-  Google services.
-- No native bridge in v1. Leave `ro.dalvik.vm.native.bridge` set to `0`, so
-  the later Berberis-based translator can be added as a new image variant.
+- **Base:**
+  - the AOSP `sdk_phone64_x86_64` userdebug emulator image (`emu_img_zip`)
+    from ci.android.com;
+  - Android 16 (API 36), pinned by build ID; Phase 1 confirms the image is
+    published;
+  - never use a floating branch;
+  - record the build ID, the SHA-256 and the artifact URL in
+    `images/manifest.json`.
+- **Tools:** only AOSP's `otatools` package (Apache-2.0): `lpunpack`,
+  `lpmake`, `avbtool`, `simg2img` and `mkbootfs`. They run on Windows through
+  WSL2 or Git Bash, so no AOSP tree is needed.
+- **Per-instance identity:** apply the cheapest mechanism that works, in this
+  order. Each one is proven in Phase 1.
+  1. **Serial and boot properties:** `androidboot.*` kernel command line
+     entries from the engine, for example `androidboot.serialno`, which AOSP
+     copies to `ro.serialno`.
+  2. **Model, brand and fingerprint on rooted instances:** a Magisk module
+     whose `post-fs-data` script calls `resetprop` with values read from the
+     instance config.
+  3. **Model, brand and fingerprint on unrooted instances:** a small
+     per-instance vendor or odm overlay whose `build.prop` the host patches
+     before first boot. AVB is turned off for MTPlayer images, and that
+     choice is recorded.
+  4. **Android ID:** a fresh data overlay creates a new one. On clone, the
+     daemon clears `settings_ssaid.xml` over root adb before the first boot
+     of the clone.
+- **Root:** userdebug already gives `adb root`. The magisk variant patches
+  the ramdisk on the host with Magisk's boot-patch script, and each instance
+  picks its ramdisk.
+- **microG:** an opt-in variant that installs the microG APKs as privileged
+  system apps through the repack, using signature spoofing support only if
+  the image supports it. The default image has no Google services.
+- **No native bridge in v1.** Leave `ro.dalvik.vm.native.bridge` set to `0`.
+- **Distribution:**
+  - the system image stays separate from the data image;
+  - assets are compressed and kept under 2 GiB each;
+  - published on GitHub Releases with a signed manifest.
 
 ## Tasks & Steps
 
-1. Script the build on the Phase 1 build host: repo sync, local manifest,
-   lunch target, `m emu_img_zip`, and an artifact name that includes the
-   AOSP tag.
-2. Add a `device/mtplayer/` overlay with the identity service, its SELinux
-   policy, and product property defaults.
-3. Add the variants: `base`, `magisk` (ramdisk only) and `microg`.
-4. Publish the artifacts (system, vendor, ramdisk variants and kernel) with
-   checksums to a local artifact folder that Phase 4's instance store reads
-   from.
-5. Document the rebuild routine for each AOSP drop, which comes twice a year.
+1. `tools/image-pipeline/fetch`: download by pinned build ID, then check the
+   checksum against the manifest.
+2. `tools/image-pipeline/repack`: unpack, apply the variant patch (base,
+   magisk or microg), repack, then write the checksums.
+3. `tools/image-pipeline/identity`: build the per-instance overlay and the
+   Magisk module that Phase 4 calls when it creates or clones an instance.
+4. `tools/image-pipeline/package`: compress, sign the manifest, and upload to
+   a GitHub Release.
+5. Document how to re-pin to a newer build ID, and which checks to re-run.
 
 ## Verification
 
-- `adb shell getprop ro.product.model` returns the value passed by the engine.
-- Two boots with different identity inputs show different Android IDs and
-  serials.
+- The pipeline uses less than 20 GB of disk from download to packaged output.
+- `adb shell getprop ro.serialno` and `ro.product.model` return the values
+  set for the instance, on both rooted and unrooted instances.
+- Two clones show different serials and Android IDs.
 - The magisk variant passes `adb shell su -c id`. The base variant has no
   `su`.
 - The microg variant passes microG's self-check.
-- The build is reproducible: two builds of the same tag give the same
-  artifact list.
+- Repacking the same build ID twice gives the same checksums.
 
 ## Risks
 
-- AOSP builds need a lot of disk and RAM. If WSL2 runs out, move to
-  miti-x600.
-- SELinux denials in the identity service. Fix them with policy, never by
-  setting SELinux to permissive.
+- **Google may stop publishing AOSP emulator images on ci.android.com, or
+  remove old build IDs.** Mirror every pinned artifact into the project's
+  GitHub Release. If no Android 16 image is published at all, fall back to
+  one build on a rented cloud VM (about 250 GB of disk for a few hours),
+  then continue with this repack pipeline.
+- **The license terms of ci.android.com artifacts are unverified.** The
+  artifacts are built from AOSP source (Apache-2.0 and GPLv2 kernel), but
+  check for any extra terms in Phase 1 before redistributing them.
+- **Patching ro properties changes how the image boots.** Keep the base image
+  unchanged, and put every change in a variant or overlay that can be turned
+  off.

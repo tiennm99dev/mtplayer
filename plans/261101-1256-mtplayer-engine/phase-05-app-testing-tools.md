@@ -16,11 +16,17 @@ commands, so that the GUI (Phase 6) and CI scripts share them.
 
 ## Requirements
 
+- **ADB:** the daemon talks to each guest's `adbd` directly, using its own
+  Rust client for the ADB device protocol: connection, auth, open/write, and
+  the sync sub-protocol. This is reused from the superseded MVP plan, so
+  MTPlayer needs no `adb.exe` and never disturbs the user's own adb server.
+  Tools that need an adb server, such as Appium, connect with the user's own
+  `adb connect 127.0.0.1:<port>`.
 - **Install:**
-  - APK through adb;
-  - split APKs with `adb install-multiple`;
-  - AAB through bundletool (`build-apks --connected-device`, then
-    `install-apks`);
+  - APK through the client's `pm install` streaming;
+  - split APKs as one install session;
+  - AAB through bundletool (`build-apks` for the instance's device spec), then
+    a split install of the result;
   - XAPK by unpacking the split APKs and pushing the OBB to
     `/sdcard/Android/obb/<pkg>/`.
 
@@ -50,14 +56,16 @@ commands, so that the GUI (Phase 6) and CI scripts share them.
 ## Tasks & Steps
 
 1. Add the tool services to the daemon API and add the CLI subcommands.
-2. Build Windows `adb.exe` from the same AOSP tree (Apache-2.0, via the
-   `win_sdk` host target), rather than redistribute platform-tools, which are
-   under the SDK license. Bundle bundletool (Apache-2.0).
+2. Extend the Phase 4 `mtp-adb` crate with the sync sub-protocol, install
+   sessions and logcat streaming, and test each against a real guest. Bundle
+   bundletool (Apache-2.0).
 3. Write an integration test per tool against a running instance.
 
 ## Verification
 
 - Each tool works on two instances at once from one CLI call.
 - An AAB built by `bundletool` from a sample app installs and launches.
-- An injected GPS fix shows up in `adb shell dumpsys location`.
+- An injected GPS fix shows up in `dumpsys location`.
+- Everything above works on a host with no Android SDK or `adb.exe`
+  installed.
 - An ARM-only APK is refused with a message that names its ABIs.

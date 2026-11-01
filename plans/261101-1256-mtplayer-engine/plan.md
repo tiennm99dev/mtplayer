@@ -60,9 +60,11 @@ which MuMu 12 cannot do.
 - **Hardware targets:**
   - miti-b550: Ryzen 7 5800X, 32 GB RAM, RTX 3060.
   - tiennm5-pc: i5-9600K, 16 GB RAM, GTX 1660.
-- **Builds:** AOSP images are built on Linux (miti-x600 or WSL2). Windows
-  engine binaries are cross-compiled with mingw or built natively; Phase 1
-  decides which.
+- **Disk:** no AOSP build. Guest images are pinned, prebuilt AOSP emulator
+  images from ci.android.com, patched on the host for root, microG and
+  identity. The image pipeline should need under 20 GB. Windows engine
+  binaries are cross-compiled with mingw or built natively; Phase 1 decides
+  which, and measures the disk the engine build needs.
 - **Code location:** public repo `tiennm99dev/mtplayer`. Company code never
   goes there.
 - **Security:**
@@ -112,7 +114,7 @@ which MuMu 12 cannot do.
 | # | Phase | Status | Effort | Depends on |
 | --- | --- | --- | --- | --- |
 | 1 | [Feasibility spike and gates](phase-01-feasibility-spike-and-gates.md) | pending | 3-4 weeks | none |
-| 2 | [Guest image pipeline](phase-02-guest-image-pipeline.md) | pending | 4-6 weeks | 1 |
+| 2 | [Guest image pipeline](phase-02-guest-image-pipeline.md) | pending | 3-5 weeks | 1 |
 | 3 | [Engine fork](phase-03-engine-fork.md) | pending | 6-10 weeks | 1 |
 | 4 | [Instance daemon and CLI](phase-04-instance-daemon-and-cli.md) | pending | 4-6 weeks | 2, 3 |
 | 5 | [App testing tools](phase-05-app-testing-tools.md) | pending | 3-4 weeks | 4 |
@@ -120,7 +122,7 @@ which MuMu 12 cannot do.
 | 7 | [Packaging, performance and rollout](phase-07-packaging-performance-and-rollout.md) | pending | 3-4 weeks | 5, 6 |
 
 Phases 2 and 3 can run in parallel after Phase 1, because they touch separate
-trees (AOSP versus the engine).
+trees (the image pipeline versus the engine).
 
 ## Architecture
 
@@ -133,11 +135,11 @@ trees (AOSP versus the engine).
                     engine.exe per instance (AEMU fork on WHPX)
                        │ gfxstream ──> host GPU driver (ANGLE fallback)
                        │ modem simulator (per-instance IMEI/IMSI/number)
-                       │ console + gRPC control + adb port pair
+                       │ console + gRPC control + adb port (mtp-adb client, no adb.exe)
                        ▼
-                    guest: own AOSP sdk_phone_x86_64 userdebug image
-                       identity init service, optional Magisk ramdisk,
-                       optional microG (x86_64 apps only in v1)
+                    guest: pinned prebuilt AOSP sdk_phone64_x86_64 userdebug image
+                       patched on the host: identity overlay or Magisk resetprop,
+                       optional Magisk ramdisk, optional microG (x86_64 apps only in v1)
 ```
 
 ## Key risks
@@ -152,6 +154,8 @@ trees (AOSP versus the engine).
   starts.
 - **GPU drivers break in vendor-specific ways.** Phase 7 keeps a list of
   known-good drivers.
+- **No Android 16 emulator image may be published on ci.android.com.** Phase
+  1 checks this first. The fallback is one build on a rented cloud VM.
 
 ## Research
 
@@ -176,3 +180,22 @@ trees (AOSP versus the engine).
 - Android version: Android 16 confirmed.
 - Not run: the agent red-team pass. Its evidence filter needs `file:line`
   citations from code, and the repo has no code yet.
+
+### Session 2, 2026-11-01
+
+- Disk: the user doesn't have the free disk an AOSP build needs, and asked
+  which parts of the superseded MVP plan fit a low-disk plan. Decision: no
+  AOSP build. The plan now keeps these parts of the MVP plan:
+  - pinned prebuilt CI images;
+  - a host-side repack instead of a rebuild;
+  - split system and data images, distributed through signed GitHub
+    Releases;
+  - its own ADB device-protocol client instead of `adb.exe`.
+
+  It still drops the MVP plan's Cuttlefish images (their host tools run on
+  Linux only), its stock QEMU or crosvm with scrcpy display (no GPU speed),
+  and Android 13.
+- Session 1's build-host answer is superseded: no machine needs to hold an
+  AOSP tree.
+- Phases changed: 1 (image gate and identity proofs), 2 (rewritten as a
+  repack pipeline), 5 (own ADB client) and 7 (installer contents).
