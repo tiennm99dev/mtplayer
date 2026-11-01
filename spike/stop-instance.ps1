@@ -23,10 +23,6 @@ param(
 . (Join-Path $PSScriptRoot 'spike-env.ps1')
 
 function Get-Alive([int[]]$Ids) { ,@($Ids | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue }) }
-function Test-OurPid([int]$Id) {
-    $p = Get-Process -Id $Id -ErrorAction SilentlyContinue
-    $p -and $p.Path -and $p.Path.StartsWith($SdkDir, [StringComparison]::OrdinalIgnoreCase)
-}
 # Waits up to $Sec for the PIDs to exit, then taskkill, then taskkill /F.
 function Stop-Leftover([int[]]$Ids, [int]$Sec) {
     $deadline = (Get-Date).AddSeconds($Sec)
@@ -49,8 +45,9 @@ function Get-Watchdogs([int[]]$Ids) {
 $state = Get-InstanceState $Name
 if (-not $state) { Write-Host "no state for $Name; nothing to stop"; return }
 $main = Get-Process -Id $state.pid -ErrorAction SilentlyContinue
-if ($main -and -not $main.Path.StartsWith($SdkDir, [StringComparison]::OrdinalIgnoreCase)) {
-    throw "PID $($state.pid) is $($main.Path), not our emulator; refusing to touch it"
+if ($main -and -not ($main.Path -and $main.Path.StartsWith($SdkDir, [StringComparison]::OrdinalIgnoreCase))) {
+    $what = if ($main.Path) { $main.Path } else { "$($main.ProcessName) (path not readable)" }
+    throw "PID $($state.pid) is $what, not our emulator; refusing to touch it"
 }
 
 # Other spike instances still running (PID alive and running from .tmp/sdk).

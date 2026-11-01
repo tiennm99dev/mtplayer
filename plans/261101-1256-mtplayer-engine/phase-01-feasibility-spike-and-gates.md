@@ -16,14 +16,14 @@ As of 2026-11-01, see the
 
 | Task | Status | Note |
 | --- | --- | --- |
-| 1. Package pin | done | Pins are in `spike/packages.pin.json`. The license hash is a text-change detector, not proven to be Google's format. |
-| 2. Boot and isolation | done | The console token is per Windows user and `adb.exe` writes to `%USERPROFILE%\.android`; both are stock limits. Not yet measured with WSL2 and Docker running. |
+| 1. Package pin | done | Pins are in `spike/packages.pin.json`. The license hash is only a detector for license-text changes; Google's tools do not recognize it. |
+| 2. Boot and isolation | done | The console token is one file per Windows user (`%USERPROFILE%\.emulator_console_auth_token`) and `adb.exe` writes to `%USERPROFILE%\.android`; both are stock limits. The gRPC token is per instance, so the daemon uses gRPC and never the console. Measured with Hyper-V present; the user re-measures with WSL2 and Docker running before Phase 4. |
 | 3. Identity proofs | done | `resetprop` reaches apps. The IMEI is fixed and the MAC address is partial. |
 | 4. Multi-instance | done | Four instances ran at once on miti-b550. |
-| 5. Baseline benchmarks | pending-user | The MuMu baseline needs the user's reboot with Hyper-V off. |
+| 5. Stock baseline benchmark | pending | Runs on the plain stock emulator; no reboot is needed. MuMu is not measured. |
 | 6. ABI check | pending-user | Needs the user's work APKs. |
 | 7. License inventory | done | First version of [`LICENSES.md`](../../LICENSES.md). |
-| 8. Go/no-go | partial | The review says GO for Phase 2. Six questions in the report wait for the user. |
+| 8. Go/no-go | partial | GO for Phase 2. The user answered the review's six questions in [session 5](plan.md#session-5-2026-11-01-phase-1-review-decisions). Criterion 3 waits for task 5. |
 
 ## Goal
 
@@ -64,8 +64,12 @@ Every proof runs on the stock packages, with no file of theirs changed.
      `.tmp`, while Hyper-V, WSL2 and Docker run.
    - Check `sys.boot_completed=1`, `adb root`, a screenshot, and that the
      console, adb and gRPC ports listen on `127.0.0.1` only.
-   - Check that the console auth token is per instance (it lives in
-     `ANDROID_EMULATOR_HOME`), and that gRPC token auth works.
+   - Check where the console auth token lives and whether it is per
+     instance, and that gRPC token auth works per instance. The spike found
+     that the console token is one file per Windows user,
+     `%USERPROFILE%\.emulator_console_auth_token`, which no flag or
+     environment variable moves, while the gRPC token is new for each
+     emulator process.
    - Check that nothing is written to the user's default Android SDK home
      folder.
 3. **Identity proofs**, each on one instance, with no Google file changed:
@@ -77,22 +81,30 @@ Every proof runs on the stock packages, with no file of theirs changed.
      GitHub release to `/data/local/tmp`, run `magisk resetprop` as root,
      restart the framework (`stop; start`), and check `Build.*` in the test
      app. Record the time the restart adds to boot;
-   - **Android ID:** a fresh AVD gets a new one; a cloned data overlay gets a
-     new one after deleting `/data/system/users/0/settings_ssaid.xml` as
-     root and rebooting headless with no network;
+   - **Android ID:** a fresh AVD gets a new one. A cloned data overlay keeps
+     the source's `android_id`, per-app SSAID and SSAID user key until this
+     reset, run as root:
+     1. `settings delete secure android_id`;
+     2. stop the framework (`stop`);
+     3. delete `/data/system/users/0/settings_ssaid.xml`;
+     4. stop the emulator, then cold start it without network
+        (`-feature -VirtioWifi` plus `restrict=on`).
+
+     Never use `adb reboot` for this; it froze emulator 37.2.13;
    - **Telephony and network:** whether `-phone-number`, the console, or any
      other flag changes the phone number, IMEI, IMSI and MAC address per
      instance.
 4. **Multi-instance.** Run four instances on miti-b550, each with its own
    AVD directory, qcow2 overlays, ports and Quick Boot snapshot, all sharing
    one read-only system image. Record RAM, commit charge and boot times.
-5. **Baseline benchmarks.**
-   - Benchmark the stock emulator on miti-b550 with Hyper-V, WSL2 and Docker
-     running.
-   - Benchmark MuMuPlayer the same way. It needs Hyper-V off, so this needs
-     a reboot that the user does; record the host state for every run.
+5. **Stock baseline benchmark.**
+   - Benchmark a plain stock-emulator launch on miti-b550 with Hyper-V, WSL2
+     and Docker running, and record the host state for every run. No reboot
+     is needed, and MuMu is not measured.
    - Benchmark set: GPU score, app cold-start time, guest `fio` 4K random
      read/write, cold boot and Quick Boot.
+   - Record the results as MTPlayer's baseline. Criterion 3 keeps
+     MTPlayer-managed instances within 10% of it on the same host.
    - Before picking each benchmark APK, check its `lib/` folder for x86_64
      code. Prefer GFXBench or a small self-built GLES/Vulkan test app.
 6. **ABI check.** List the ABIs of the work apps the user tests (the `lib/`
@@ -118,12 +130,14 @@ Every proof runs on the stock packages, with no file of theirs changed.
 
 ## Verification
 
-- An instance from `.tmp` boots on WHPX with `HypervisorPlatform` on and a
-  WSL2 distro running, and `adb root` succeeds.
+- An instance from `.tmp` boots on WHPX with `HypervisorPlatform` on, and
+  `adb root` succeeds. Hyper-V present is the Phase 1 gate; the user
+  re-measures once with the Ubuntu WSL2 distro and Docker up before Phase 4
+  starts (session 5, decision 2).
 - Every identity proof in task 3 is recorded as passed or failed, with its
   evidence.
-- The benchmark report has numbers for the stock emulator and MuMu, with the
-  host state noted for each run.
+- The benchmark report has baseline numbers for a plain stock-emulator
+  launch, with the host state noted for each run.
 - No emulator process is left running after the spike.
 
 ## Risks and rollback
@@ -131,6 +145,8 @@ Every proof runs on the stock packages, with no file of theirs changed.
 - If runtime identity doesn't reach apps, criterion 4 has to shrink. The
   only way to keep it would be modifying the image, which the user ruled out,
   so this goes back to the user.
-- Nothing in this phase changes the host beyond the WHPX feature, a WSL2
-  distro, and the reboots for the MuMu baseline. Deleting `.tmp/` undoes the
-  rest.
+- Nothing in this phase changes the host beyond the WHPX feature and a WSL2
+  distro. Deleting `.tmp/` undoes the rest, except the two files that
+  Google's stock binaries write in the user profile
+  (`%USERPROFILE%\.emulator_console_auth_token` and
+  `%USERPROFILE%\.android\adbkey*`).

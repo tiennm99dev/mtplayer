@@ -8,8 +8,10 @@
   still matches it (channel-0, uses-license android-sdk-license, URL, size,
   SHA-1), downloads the zip to .tmp/dl, verifies size and SHA-1, extracts it into
   its own new empty directory .tmp/dl/x-<name>, and moves the result into
-  .tmp/sdk. It writes the android-sdk-license acceptance in Google's format
-  (SHA-1 of the license text) to .tmp/sdk/licenses/android-sdk-license.
+  .tmp/sdk. It records the android-sdk-license acceptance as the SHA-1 of the
+  XML license text node in .tmp/sdk/licenses/android-sdk-license. That hash is
+  used to detect changes to the license text. It differs from the hash Android
+  Studio writes for the same text, so sdkmanager may not recognize this file.
 
   A second run with everything in place downloads nothing.
 
@@ -49,7 +51,7 @@ function Get-RepoXml([string]$Rel) {
     $XmlCache[$Rel]
 }
 
-# Google's License.getLicenseHash(): sha1 of the UTF-8 bytes of the untrimmed text value.
+# SHA-1 of the UTF-8 bytes of the untrimmed XML license text node, used to detect text changes.
 function Get-LicenseHash([xml]$Doc, [string]$Id) {
     $node = $Doc.DocumentElement.SelectSingleNode("license[@id='$Id']")
     if (-not $node) { throw "license $Id not in XML" }
@@ -113,6 +115,7 @@ if ($UpdatePins) {
 }
 
 # ---- normal run ----
+Write-Host "license  these packages are under the Android SDK License ($LicenseId); running this script records your acceptance of it for this machine"
 $pins = Read-Pins
 if (-not $pins -or -not $pins.Contains('packages')) { throw "no package pins in $PinFile; run with -UpdatePins first" }
 $licHash = $pins.licenses[$LicenseId].sha1
@@ -160,7 +163,7 @@ foreach ($pin in $pins.packages) {
     Write-Host "install  $($pin.path) $($pin.revision) -> $dir"
 }
 
-# License acceptance in Google's format: one hash per line, appended with a leading newline.
+# License acceptance record: one text-node hash per line, appended with a leading newline.
 $licFile = Join-Path $SdkDir "licenses\$LicenseId"
 $have = if (Test-Path -LiteralPath $licFile) { (Get-Content -LiteralPath $licFile) -contains $licHash } else { $false }
 if (-not $have) {

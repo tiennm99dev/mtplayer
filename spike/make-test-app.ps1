@@ -68,8 +68,15 @@ Write-Host "ok       add classes.dex"
 
 Invoke-Step 'zipalign' (Join-Path $bt 'zipalign.exe') @('-p', '-f', '4', $unaligned, $aligned)
 
-# Throwaway spike signing key: the literal password protects nothing of value.
-$ksPass = 'mtpspike'
+# Throwaway spike signing key. Its password is random per keystore, kept next to it
+# under .tmp (gitignored) and never printed.
+$ksPassFile = Join-Path $out 'spike.keystore.pass'
+if (-not (Test-Path -LiteralPath $ks) -or -not (Test-Path -LiteralPath $ksPassFile)) {
+    if (Test-Path -LiteralPath $ks) { Remove-Item -LiteralPath $ks -Force }
+    $bytes = [byte[]]::new(24); [Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+    [IO.File]::WriteAllText($ksPassFile, [Convert]::ToHexString($bytes).ToLowerInvariant())
+}
+$ksPass = [IO.File]::ReadAllText($ksPassFile).Trim()
 if (-not (Test-Path -LiteralPath $ks)) {
     Invoke-Step 'keytool' $keytool @('-genkeypair', '-keystore', $ks, '-storepass', $ksPass, '-keypass', $ksPass, '-alias', 'spike',
         '-keyalg', 'RSA', '-keysize', '2048', '-validity', '3650', '-dname', 'CN=MTPlayer spike test')

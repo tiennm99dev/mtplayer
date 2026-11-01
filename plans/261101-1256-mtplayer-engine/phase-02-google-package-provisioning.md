@@ -31,10 +31,11 @@ versions, checks them and stores them in its own folder.
     repository XML, and Magisk's license;
   - the dialog asks the user to confirm that, when installing for work, they
     may accept the license for their employer (§2.4);
-  - store each acceptance in Google's format, as the SHA-1 of the exact
-    license text, on its own line in `<sdk>/licenses/<license-id>`, so
-    Google's own tools recognize it. Record a timestamp in the store as
-    well;
+  - store MTPlayer's own acceptance record for each license: the SHA-1 of
+    the license text in the repository XML, used to detect text changes, the
+    acceptance timestamp, and a copy of the accepted text. This is not
+    Google's acceptance format, and Google's tools are not expected to
+    recognize it; the emulator never reads the `licenses` folder;
   - when the text changes, its hash changes, so the gate asks again;
   - nothing downloads without an acceptance.
 - **Notices:** keep the `LICENSE` and `NOTICE` files that ship in each

@@ -52,6 +52,12 @@ function Get-GrpcPort([int]$ConsolePort) {
     8600 + ($ConsolePort - 5600) / 2
 }
 
+# True when the PID is alive and its executable runs from <repo>/.tmp/sdk (a reused PID is not ours).
+function Test-OurPid([int]$Id) {
+    $p = Get-Process -Id $Id -ErrorAction SilentlyContinue
+    [bool]($p -and $p.Path -and $p.Path.StartsWith($SdkDir, [StringComparison]::OrdinalIgnoreCase))
+}
+
 # The PID plus its descendants that run from <repo>/.tmp/sdk (emulator -> qemu and helpers).
 function Get-OwnTree([int]$RootPid) {
     $all = Get-CimInstance Win32_Process

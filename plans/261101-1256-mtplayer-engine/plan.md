@@ -65,6 +65,10 @@ Android", and testing apps is part of that.
 - **Licenses:** MTPlayer's own code stays Apache-2.0. It distributes no GPL
   engine, kernel or Magisk binary. Magisk is downloaded from its GitHub
   release on the user's machine, the same way as Google's packages.
+- **2026-11-01, user (session 5): Phase 1 review decisions.** Cold boot is
+  defined, first boot gets its own target, the console is unused, the license
+  record is MTPlayer's own, and the MuMu comparison is dropped. See the
+  [session 5 log](#session-5-2026-11-01-phase-1-review-decisions).
 
 ## Constraints
 
@@ -99,7 +103,12 @@ Android", and testing apps is part of that.
 - **Security:**
   - every console, adb and gRPC port binds to `127.0.0.1` only, because
     instances run with root adb;
-  - console and gRPC require per-instance tokens that only the daemon holds;
+  - gRPC requires a per-instance token (`-grpc-use-token`) that only the
+    daemon holds. The daemon never uses the emulator console: it stops
+    instances and saves and loads snapshots over gRPC. The stock console
+    token is one file per Windows user
+    (`%USERPROFILE%\.emulator_console_auth_token`), so the daemon warns if
+    that file is empty, because an empty file turns console auth off;
   - the guest is treated as untrusted input, including file paths and
     logcat text;
   - downloads are checked against pinned hashes before use;
@@ -120,20 +129,23 @@ Android", and testing apps is part of that.
 
 1. With Hyper-V, WSL2 and Docker running, an instance boots on both target
    hosts:
-   - cold boot ≤ 60 s;
-   - Quick Boot ≤ 10 s.
+   - cold boot ≤ 60 s. A cold boot starts an existing, initialized instance
+     without a snapshot;
+   - Quick Boot ≤ 10 s;
+   - first boot of a new instance ≤ 90 s for one instance, reported
+     separately from cold boot. The daemon staggers creating several
+     instances, because first boots run slower when they overlap.
 2. **Instance counts:**
    - four persistent instances run at once on miti-b550;
    - two run on tiennm5-pc, with 2 GB guest RAM each and WSL2 capped at 4 GB
      (`.wslconfig`), and the commit charge stays below physical RAM;
    - each instance has its own adb port.
-3. Performance against MuMuPlayer on miti-b550, using the Phase 1 benchmark
-   set. The same x86_64 APKs run on both, and MuMu is measured with Hyper-V
-   off. The starting thresholds are below; Phase 1 may propose changes, and
-   the user signs off on them:
-   - GPU score ≥ 80% of MuMu;
-   - app cold start ≤ 125% of MuMu's time;
-   - guest `fio` 4K random ≥ 50% of MuMu.
+3. **Performance against the stock baseline.** Phase 1 measures its
+   benchmark set (GPU score, app cold start, guest `fio` 4K random, cold boot
+   and Quick Boot) on a plain stock-emulator launch and records it as
+   MTPlayer's baseline. On each host, MTPlayer-managed instances stay within
+   10% of a plain stock-emulator launch on the same host, for every benchmark
+   in the set.
 4. **Cloning and identity:**
    - a cloned instance gets a new Android ID;
    - model, brand, device, fingerprint and `ro.serialno` can be set per
@@ -154,7 +166,11 @@ Android", and testing apps is part of that.
    ABI. The limitation is in the README.
 8. Install and uninstall on tiennm5-pc with no admin steps beyond turning on
    the WHPX Windows feature. Uninstall leaves nothing behind, including in the
-   user's default Android SDK home folder.
+   user's default Android SDK home folder. Two files there are written by
+   Google's stock binaries, not by MTPlayer's code: the emulator writes
+   `%USERPROFILE%\.emulator_console_auth_token` and `adb` writes
+   `%USERPROFILE%\.android\adbkey*`. Uninstall removes only the files that
+   MTPlayer created.
 9. **Licenses:**
    - `LICENSES.md` lists every component's license, and states which ones the
      user downloads rather than MTPlayer shipping them;
@@ -164,7 +180,7 @@ Android", and testing apps is part of that.
 
 | # | Phase | Status | Effort | Depends on |
 | --- | --- | --- | --- | --- |
-| 1 | [Feasibility spike and gates](phase-01-feasibility-spike-and-gates.md) | in progress: tasks 1-4 and 7 done, review says go for Phase 2; tasks 5-6 and decisions pending the user | 2-3 weeks | none |
+| 1 | [Feasibility spike and gates](phase-01-feasibility-spike-and-gates.md) | in progress: tasks 1-4 and 7 done, go for Phase 2, review decisions taken (session 5); task 5 (stock baseline benchmark) and task 6 (ABI check) pending before Phase 4 | 2-3 weeks | none |
 | 2 | [Google package provisioning](phase-02-google-package-provisioning.md) | pending | 2-3 weeks | 1 |
 | 3 | [Own engine fork](phase-03-engine-fork.md) | deferred | later plan | user-funded cloud build |
 | 4 | [Instance daemon and CLI](phase-04-instance-daemon-and-cli.md) | pending | 4-6 weeks | 2 |
@@ -187,7 +203,7 @@ For one developer, the phases run in order: 1, 2, 4, 5, 6, 7. They sum to
                                  ▼
                     stock emulator.exe per instance (Google prebuilt, WHPX, token auth)
                        │ -gpu host (gfxstream) ──> host GPU driver (ANGLE fallback)
-                       │ console + gRPC control + adb port (mtp-adb client, no adb.exe)
+                       │ gRPC control + adb port (mtp-adb client, no adb.exe)
                        ▼
                     guest: system-images;android-36;default;x86_64 (userdebug, unmodified)
                        identity at runtime: emulator flags and boot properties,
@@ -202,8 +218,9 @@ For one developer, the phases run in order: 1, 2, 4, 5, 6, 7. They sum to
   followed by a framework restart. Phase 1 proves it before anything else
   depends on it. If it fails, criterion 4 shrinks and the user decides.
 - **The stock emulator may fix some hardware identifiers** (IMEI, IMSI, MAC)
-  with no flag to change them, and v1 can't patch the engine. Phase 1 lists
-  what can change; criterion 4 already allows for the rest.
+  with no flag to change them, and v1 can't patch the engine. Phase 1 found
+  the IMEI and the eth0 MAC address fixed; criterion 4 already allows for
+  that, and the README lists them.
 - **Google can change or withdraw packages.** Old zips on dl.google.com have
   stayed available so far, but nothing promises it. MTPlayer pins exact
   versions and hashes, and keeps working with the copies already downloaded.
@@ -212,7 +229,9 @@ For one developer, the phases run in order: 1, 2, 4, 5, 6, 7. They sum to
   the SDK "to develop another SDK". MTPlayer is a test tool, not an SDK, but
   the user should confirm this reading for work use.
 - **WHPX VM exits cost more than the kernel drivers MuMu and LDPlayer use.**
-  The Phase 1 benchmark checks criterion 3 before the big build-out starts.
+  The user chose not to benchmark MuMu (session 5), so this risk is accepted.
+  The Phase 1 stock baseline benchmark records what WHPX gives before the big
+  build-out starts, and criterion 3 keeps MTPlayer within 10% of it.
 - **GPU drivers break in vendor-specific ways.** Phase 7 keeps a list of
   known-good drivers.
 
@@ -280,4 +299,50 @@ check, token auth and the residual-threat note, and the WSL2 memory cap.
 - License research (Google sources and community precedent, on Fable):
   the design holds. The user had the four license rules added to the
   constraints, and the stable-only filter, Google-format acceptance, the
-  employer confirmation and kept notices added to Phase 2.
+  employer confirmation and kept notices added to Phase 2. Session 5
+  replaced the Google-format acceptance with MTPlayer's own record.
+
+### Session 5, 2026-11-01: Phase 1 review decisions
+
+The user answered the six questions of the Fable review in the
+[stock emulator gates report](../reports/spike-261101-1700-stock-emulator-gates.md).
+
+1. **Cold boot.** In criterion 1, "cold boot ≤ 60 s" means starting an
+   existing, initialized instance without a snapshot (measured median
+   23.8 s). The first boot of a new instance is reported separately, with its
+   own target of ≤ 90 s for one instance (measured 60.3 to 66 s, and about
+   92 s each when four are created at once). The daemon staggers creating
+   several instances.
+2. **WSL2 and Docker.** Hyper-V present is accepted as the Phase 1 gate now.
+   Before Phase 4 starts, the user re-measures once with the Ubuntu WSL2
+   distro and Docker up (`spike/measure-cold-boot.ps1`, about 3 minutes).
+3. **IMEI and MAC.** Criterion 4 stays as written. The README lists the IMEI
+   (fixed at the emulator's compiled-in value) and the eth0 MAC address as
+   fixed. MTPlayer offers an optional, RAM-only runtime MAC change
+   (`ip link set` as root). The supported per-instance set is phone number,
+   IMSI and ICCID, model, brand, device, fingerprint, serial and Android ID.
+4. **Tokens.** gRPC requires a per-instance token, which the spike proved
+   (`-grpc-use-token`). The daemon never uses the emulator console. It stops
+   instances and saves and loads snapshots over gRPC (`EmulatorController`
+   `setVmState` with `SHUTDOWN`; `SnapshotService` `SaveSnapshot` and
+   `LoadSnapshot`). It warns if `%USERPROFILE%\.emulator_console_auth_token`
+   is empty, because that turns console auth off. The console port still
+   binds to `127.0.0.1` only.
+5. **License acceptance.** Phase 2 stores MTPlayer's own acceptance record:
+   the SHA-1 of the XML license text as a text-change detector, a timestamp,
+   and a copy of the text. The plan no longer claims that Google's tools
+   recognize it.
+6. **MuMu.** The MuMu comparison is skipped entirely, with no reboot with
+   Hyper-V off. Criterion 3 no longer compares with MuMu: the Phase 1
+   benchmark set (GPU score, app cold start, guest `fio` 4K random, cold boot
+   and Quick Boot) is measured on the plain stock emulator and recorded as
+   MTPlayer's baseline, and MTPlayer-managed instances must stay within 10%
+   of a plain stock-emulator launch on the same host. Phase 1 task 5 becomes
+   the stock baseline benchmark (pending, no reboot needed). Task 6, the ABI
+   check, stays pending on the user's work APKs. In Phase 7, MuMu stays
+   installed until criterion 3 passes on both hosts and the user confirms
+   the switch.
+
+The review's doc fixes were applied to this plan, to phases 1, 2, 4 and 7,
+and to the report: the full Android ID reset recipe, a configurable port
+base of 5600 or higher, and the Phase 4 design notes from the spike.

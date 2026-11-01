@@ -28,7 +28,7 @@ $adbPort = $ConsolePort + 1
 if (-not (Test-Path -LiteralPath (Join-Path $AvdDir "$Name.ini"))) { throw "no AVD $Name in $AvdDir; run spike/new-avd.ps1 $Name" }
 
 $state = Get-InstanceState $Name
-if ($state -and (Get-Process -Id $state.pid -ErrorAction SilentlyContinue)) {
+if ($state -and (Test-OurPid $state.pid)) {
     throw "$Name already running as PID $($state.pid); stop it with spike/stop-instance.ps1 $Name"
 }
 $busy = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in @($ConsolePort, $adbPort, $grpcPort) }

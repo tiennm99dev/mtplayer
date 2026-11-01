@@ -13,9 +13,10 @@ Google's stock emulator 37.2.13 and the unmodified
 and 4 on miti-b550 within the limits listed below. Everything ran from a
 private SDK folder under `.tmp/`, used only runtime features, and changed no
 Google file. The Fable review gives **GO for Phase 2** with no code blocker.
-Phase 4 should wait until the two pending-user tasks are done: the MuMu
-baseline (task 5) and the ABI check of the work APKs (task 6). Six wording
-decisions for the user are listed at the end.
+Phase 4 should wait until the two pending tasks are done: the stock baseline
+benchmark (task 5) and the ABI check of the work APKs (task 6). The user
+answered the reviewer's six questions in session 5; see
+[Decisions (session 5)](#decisions-session-5).
 
 The stock stack has these hard limits:
 
@@ -64,14 +65,14 @@ newer, which 37.2.13 meets.
 **Correction to the license-acceptance hash.** The pin stores
 `efa68a6b3c661d18699d5c026771d5911cdc2f83`, which is the SHA-1 of the raw
 license text node in Google's XML. The provision stage said this differs from
-the well-known `24333f8a…` because Google revised the text. The reviewer showed
-that this is wrong: the text is unchanged and still dated January 16, 2019,
-and Android Studio wrote `24333f8a…` for the same text on this machine on
-2026-10-24. Nobody has reproduced how Google gets from this text to its hash,
-so the spike's value works as a detector for license-text changes but is not
-proven to be Google's acceptance format. The emulator never reads the
-`licenses` folder, so Phase 1 is not affected. Phase 2 must not claim
-`sdkmanager` interop until it reproduces Google's value (question 5).
+the well-known `24333f8a…` because Google revised the text. That was wrong:
+the text was not revised and is still dated January 16, 2019, and Android
+Studio wrote `24333f8a…` for the same text on this machine on 2026-10-24.
+Nobody has reproduced how Google gets from this text to its hash, so the
+spike's value is a detector for license-text changes only, and Google's tools
+do not recognize it. The emulator never reads the `licenses` folder, so
+Phase 1 is not affected. The user decided that Phase 2 keeps MTPlayer's own
+acceptance record and makes no `sdkmanager` interop claim (decision 5).
 
 ## Checks and proofs
 
@@ -189,9 +190,10 @@ The details behind these results are as follows.
   `/data/system/users/0/settings_ssaid.xml`, stop the emulator, and cold start
   with no network (`-feature -VirtioWifi` plus `restrict=on`). After it,
   `android_id` went from `d9c5d677a83f07b2` to `9f60ac64f2ad3f8e` and the
-  app's SSAID from `597aaa74bcfc4bd5` to `0d662b0139149f0f`. The recipe in
-  phase-01 and phase-04 (delete the SSAID file and `adb reboot`) is
-  incomplete, and `adb reboot` froze emulator 37.2.13.
+  app's SSAID from `597aaa74bcfc4bd5` to `0d662b0139149f0f`. The earlier
+  recipe in phase-01 and phase-04 (delete the SSAID file and `adb reboot`)
+  was incomplete, and `adb reboot` froze emulator 37.2.13. Both phase files
+  now use the recipe above.
 - `-phone-number 15551230001` gave the line number `+15551230001`. A
   per-instance copy of the ICC profile gave IMSI `310260123450001` and ICCID
   `89860318640220130001`; the copy lives in the AVD folder, and `.tmp/sdk` was
@@ -322,20 +324,29 @@ findings are below.
   recipe. Build fields and serial per instance pass. The phone number, IMSI
   and ICCID pass. The IMEI is fixed and the MAC address is partial; the
   criterion already allows listing them as fixed.
-- **Security wording:** the plan's per-instance console token cannot be met.
-  The daemon does not need the console, because a graceful shutdown
+- **Security wording:** the plan's earlier requirement of a console token per
+  instance cannot be met. The daemon does not need the console, because a
+  graceful shutdown
   (`setVmState` with `SHUTDOWN`) and snapshot save and load are available over
   the per-instance gRPC token. The daemon should warn when the per-user token
   file is empty, because an empty file turns console auth off.
-- **Script findings**, all low or informational, none fixed in this commit:
-  - `fetch-packages.ps1` calls its hash "Google's format" and should call it a
-    license-text change detector (medium, a claim rather than a safety issue);
-  - `start-instance.ps1` treats a reused PID as a running instance;
-  - `stop-instance.ps1` lacks a null guard on a protected process's path;
-  - `multi-instance.ps1` uses English performance-counter names;
-  - `fetch-packages.ps1` should print a one-line notice that running it
-    accepts the license on this machine;
-  - `make-test-app.ps1` holds a literal password for a throwaway keystore;
+- **Script findings**, all low or informational. The six script findings were
+  fixed in session 5 in `spike/*.ps1`; the crashpad item feeds Phase 4:
+  - `fetch-packages.ps1` called its hash "Google's format" (medium, a claim
+    rather than a safety issue); it now calls it a license-text change
+    detector;
+  - `start-instance.ps1` treated a reused PID as a running instance; it now
+    requires the process to run from `.tmp/sdk` (`Test-OurPid` in
+    `spike-env.ps1`);
+  - `stop-instance.ps1` dereferenced a null path on a protected process; it
+    now refuses with a message;
+  - `multi-instance.ps1` used English performance-counter names; it now reads
+    `Win32_PerfFormattedData_PerfOS_Memory` and
+    `Win32_PerfRawData_PerfOS_Processor`;
+  - `fetch-packages.ps1` did not say that running it accepts the license on
+    this machine; it now prints a one-line acceptance notice;
+  - `make-test-app.ps1` held a literal keystore password; it now generates a
+    random one into `.tmp/tools/test-app/spike.keystore.pass`;
   - `crashpad_handler.exe` runs even with `-no-metrics`, so Phase 4 must
     confirm that no crash report is uploaded without consent.
 - **What to avoid:** hard-coding Google's hash, working around the per-user
@@ -344,17 +355,19 @@ findings are below.
   emulator, treating the shared `netsimd` as one instance's child, and
   counting a four-at-once first boot as a cold boot.
 
-## Pending-user items
+## Pending items
 
-- **Task 5, the MuMu baseline,** needs a reboot with Hyper-V off, which only
-  the user can do. Criterion 3 is unmeasured until then.
-- **Task 6, the ABI check,** needs the user's work APKs.
-- **Re-measure with WSL2 and Docker running.** Start the Ubuntu WSL2 distro
-  and Docker, then run `spike/measure-cold-boot.ps1 spike0 5600` (three runs,
-  about three minutes).
-- **tiennm5-pc** was not available, so the parts of criteria 1 and 2 for that
-  host are deferred.
-- **Housekeeping.** `.tmp/avd` holds about 28.7 GB (`spike0` to `spike3` and
+- **Task 5, the stock baseline benchmark** (pending, any session can run it;
+  it records the host state for each run with `spike/record-host-state.ps1`),
+  runs on the plain stock emulator and
+  needs no reboot. Criterion 3 is unmeasured until then.
+- **Task 6, the ABI check** (user), needs the user's work APKs.
+- **Re-measure with WSL2 and Docker running** (user). Start the Ubuntu WSL2
+  distro and Docker, then run `spike/measure-cold-boot.ps1 spike0 5600` (three
+  runs, about three minutes) before Phase 4 starts.
+- **tiennm5-pc** (user) was not available, so the parts of criteria 1 and 2
+  for that host are deferred.
+- **Housekeeping** (user). `.tmp/avd` holds about 28.7 GB (`spike0` to `spike3` and
   `m0` to `m3`). The `adbkey` files in `%USERPROFILE%\.android` are safe to
   delete if the user does not otherwise use adb.
 
@@ -381,7 +394,36 @@ The reviewer asked the user six questions:
 6. **Should Phase 2 start now?** The reviewer recommends starting Phase 2 now
    and finishing tasks 5 and 6 before Phase 4 starts.
 
-The reviewer also listed plan wording fixes that follow from these decisions:
-`plan.md` lines 102, 123 and 155-157, phase-01 lines 51-52 and 64-66, phase-02
-lines 34-37, and phase-04 lines 50-52, 59 and 61. Among them, phase-04 line 59
-uses ports 5554+2n and 5555+2n, which collide with MuMu's port 5555.
+The reviewer also listed plan wording fixes that follow from these decisions,
+for `plan.md` and the phase 1, 2 and 4 files. Among them, the Phase 4 port
+scheme used console port 5554 and adb port 5555, which collide with MuMu's
+port 5555. All of these fixes have been applied.
+
+## Decisions (session 5)
+
+The user decided the six questions on 2026-11-01. The full wording is in the
+plan's [session 5 log](../261101-1256-mtplayer-engine/plan.md#session-5-2026-11-01-phase-1-review-decisions).
+
+1. **Cold boot** means starting an initialized instance without a snapshot,
+   with a target of 60 seconds (measured median 23.8 seconds). The first boot
+   of a new instance is reported separately, with a target of 90 seconds for
+   one instance, and the daemon staggers creating several.
+2. **WSL2 and Docker:** the Hyper-V-present result is accepted as the Phase 1
+   gate. The user re-measures once with the Ubuntu WSL2 distro and Docker up
+   before Phase 4 starts.
+3. **IMEI and MAC:** criterion 4 stays as written. The README lists the IMEI
+   and the eth0 MAC address as fixed, and MTPlayer offers an optional
+   RAM-only MAC change. The supported per-instance set is phone number, IMSI
+   and ICCID, model, brand, device, fingerprint, serial and Android ID.
+4. **Tokens:** gRPC requires a per-instance token. The daemon never uses the
+   console; it stops instances and saves and loads snapshots over gRPC, and
+   warns if the per-user console token file is empty. The console port still
+   binds to `127.0.0.1` only.
+5. **License acceptance:** Phase 2 stores MTPlayer's own acceptance record
+   (the SHA-1 of the license text as a change detector, a timestamp, and a
+   copy of the text). The claim that Google's tools recognize it is dropped.
+6. **MuMu:** the MuMu comparison is skipped, so no reboot with Hyper-V off is
+   needed. Task 5 becomes a stock baseline benchmark, and criterion 3 now
+   requires MTPlayer-managed instances to stay within 10% of a plain
+   stock-emulator launch on the same host. MuMu stays installed until
+   criterion 3 passes on both hosts and the user confirms the switch.

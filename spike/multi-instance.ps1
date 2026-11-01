@@ -88,12 +88,16 @@ function Get-SdkFingerprint {
     $map
 }
 
-# Host memory, commit charge, CPU idle (average over $CpuSec one-second samples)
+# Host memory, commit charge, CPU idle (average over a $CpuSec-second interval)
 # and the working set / private bytes of every process running from .tmp/sdk.
 function Get-HostSample([string]$Label, [int]$CpuSec = 10) {
-    $c = (Get-Counter '\Memory\Committed Bytes', '\Memory\Commit Limit').CounterSamples
-    $idle = (Get-Counter '\Processor(_Total)\% Idle Time' -SampleInterval 1 -MaxSamples $CpuSec).CounterSamples |
-            Measure-Object CookedValue -Average
+    # CIM performance classes instead of Get-Counter: counter names are localized on non-English Windows.
+    $mem = Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory
+    $cpu0 = Get-CimInstance Win32_PerfRawData_PerfOS_Processor -Filter "Name = '_Total'"
+    Start-Sleep -Seconds $CpuSec
+    $cpu1 = Get-CimInstance Win32_PerfRawData_PerfOS_Processor -Filter "Name = '_Total'"
+    # PercentIdleTime is a 100 ns idle timer; idle % over the interval = idle delta / elapsed delta.
+    $idlePct = 100.0 * ($cpu1.PercentIdleTime - $cpu0.PercentIdleTime) / ($cpu1.Timestamp_Sys100NS - $cpu0.Timestamp_Sys100NS)
     $os = Get-CimInstance Win32_OperatingSystem
     $procs = @(Get-SdkProcs | ForEach-Object { Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue })
     $per = [ordered]@{}
@@ -108,9 +112,10 @@ function Get-HostSample([string]$Label, [int]$CpuSec = 10) {
     [ordered]@{
         label = $Label; time = (Get-Date).ToString('o')
         physTotalMB = [int]($os.TotalVisibleMemorySize / 1KB); physUsedMB = [int](($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1KB)
-        committedGB = [math]::Round(($c | Where-Object Path -like '*committed bytes').CookedValue / 1GB, 2)
-        commitLimitGB = [math]::Round(($c | Where-Object Path -like '*commit limit').CookedValue / 1GB, 2)
-        cpuIdlePct = [math]::Round($idle.Average, 1); cpuIdleSeconds = $CpuSec
+        availableMB = [int]($mem.AvailableBytes / 1MB)
+        committedGB = [math]::Round($mem.CommittedBytes / 1GB, 2)
+        commitLimitGB = [math]::Round($mem.CommitLimit / 1GB, 2)
+        cpuIdlePct = [math]::Round([math]::Min(100, [math]::Max(0, $idlePct)), 1); cpuIdleSeconds = $CpuSec
         sdkProcessCount = $procs.Count
         sdkWorkingSetMB = (Get-SumMB $procs 'WorkingSet64')
         sdkPrivateMB = (Get-SumMB $procs 'PrivateMemorySize64')

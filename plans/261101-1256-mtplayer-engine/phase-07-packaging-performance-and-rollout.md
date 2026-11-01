@@ -26,8 +26,10 @@ the license paperwork. Then replace MuMuPlayer on the work PC.
    - uninstall removes the instance store and the private SDK root only when
      the user confirms.
 2. **Performance tuning.** Re-run the Phase 1 benchmark set on miti-b550 and
-   tiennm5-pc. Tune the defaults (cores, RAM, ANGLE versus host, Quick Boot)
-   until acceptance criteria 1-3 pass. On tiennm5-pc, set
+   tiennm5-pc, on MTPlayer-managed instances and on a plain stock-emulator
+   launch on the same host. Tune the defaults (cores, RAM, ANGLE versus host,
+   Quick Boot) until acceptance criteria 1-3 pass; criterion 3 needs every
+   benchmark within 10% of the plain stock launch. MuMu is not benchmarked. On tiennm5-pc, set
    `.wslconfig` `memory=4GB`, and measure the commit charge with two
    instances running.
 3. **GPU driver list.** Record the known-good NVIDIA drivers for the RTX 3060
@@ -44,7 +46,12 @@ the license paperwork. Then replace MuMuPlayer on the work PC.
 6. **Docs:** a README in the project repo covering:
    - install, the license acceptance and the CLI;
    - package re-pins;
-   - the x86_64-only limitation, and any identity fields that stay fixed;
+   - the x86_64-only limitation;
+   - identity: the per-instance set is phone number, IMSI and ICCID,
+     model, brand, device, fingerprint, serial and Android ID. The IMEI
+     stays fixed at the emulator's compiled-in value, and the eth0 MAC
+     address stays fixed, with an optional change in RAM only that lasts
+     until the next cold boot;
    - the license rules: MTPlayer ships no Google file, and spoofing is for
      testing your own apps, not for getting around third-party anti-fraud
      systems;
@@ -60,5 +67,6 @@ the license paperwork. Then replace MuMuPlayer on the work PC.
 
 ## Rollback
 
-- MuMuPlayer stays installed until criterion 3 passes on both hosts and the
-  user confirms the switch.
+- MuMuPlayer stays installed until criterion 3 (within 10% of a plain
+  stock-emulator launch) passes on both hosts and the user confirms the
+  switch.
