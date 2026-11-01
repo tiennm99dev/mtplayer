@@ -34,7 +34,9 @@ GUI and scripts never start emulator processes themselves.
   - one generated AVD directory per instance (`config.ini`,
     `hardware-qemu.ini`), with `ANDROID_AVD_HOME`, `ANDROID_EMULATOR_HOME`
     and `ANDROID_SDK_ROOT` set for every emulator process;
-  - the SDK root is Phase 2's private one;
+  - the SDK root is the root of the set recorded in the instance config,
+    leased while the instance exists. It holds no `adb.exe`, and
+    `screen_off_timeout` arrives by boot property;
   - nothing is written to the user's default Android SDK home folder.
 - **Lifecycle:** create, clone (fresh or full), start, stop, restart, delete,
   and snapshot save/load, with batch forms (`--all`, `--group`). The daemon
@@ -115,7 +117,8 @@ These come from the Phase 1 spike and its
 1. Define the gRPC API (`proto/instances.proto`) and the CLI command tree,
    then implement them.
 2. Implement the store, the AVD-directory generator, and a package registry
-   that reads the Phase 2 store.
+   that reads the Phase 2 store. Creating an instance leases the root of its
+   recorded set, and deleting the instance releases that lease.
 3. Implement the launcher. It turns an instance config into emulator flags,
    boot properties, tokens and environment variables, and applies the
    runtime identity after boot.

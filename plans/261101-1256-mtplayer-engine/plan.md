@@ -170,7 +170,11 @@ Android", and testing apps is part of that.
    Google's stock binaries, not by MTPlayer's code: the emulator writes
    `%USERPROFILE%\.emulator_console_auth_token` and `adb` writes
    `%USERPROFILE%\.android\adbkey*`. Uninstall removes only the files that
-   MTPlayer created.
+   MTPlayer created. The GPU driver also refreshes its own caches in place while
+   an instance renders with `-gpu host` (on NVIDIA,
+   `%LOCALAPPDATA%\NVIDIA\GLCache` and `C:\ProgramData\NVIDIA Corporation\Drs`),
+   as it does for any OpenGL program; those files are the driver's and are
+   outside uninstall.
 9. **Licenses:**
    - `LICENSES.md` lists every component's license, and states which ones the
      user downloads rather than MTPlayer shipping them;
@@ -181,7 +185,7 @@ Android", and testing apps is part of that.
 | # | Phase | Status | Effort | Depends on |
 | --- | --- | --- | --- | --- |
 | 1 | [Feasibility spike and gates](phase-01-feasibility-spike-and-gates.md) | in progress: tasks 1-4 and 7 done, go for Phase 2, review decisions taken (session 5); task 5 (stock baseline benchmark) and task 6 (ABI check) pending before Phase 4 | 2-3 weeks | none |
-| 2 | [Google package provisioning](phase-02-google-package-provisioning.md) | pending | 2-3 weeks | 1 |
+| 2 | [Google package provisioning](phase-02-google-package-provisioning.md) | in review: every check passed against the real endpoints; the user's terminal check of the interactive license prompt is pending (session 6) | 2-3 weeks | 1 |
 | 3 | [Own engine fork](phase-03-engine-fork.md) | deferred | later plan | user-funded cloud build |
 | 4 | [Instance daemon and CLI](phase-04-instance-daemon-and-cli.md) | pending | 4-6 weeks | 2 |
 | 5 | [App testing tools](phase-05-app-testing-tools.md) | pending | 3-4 weeks | 4 |
@@ -244,6 +248,7 @@ For one developer, the phases run in order: 1, 2, 4, 5, 6, 7. They sum to
 - [Image and engine gates, 2026-11-01](../reports/spike-261101-1629-image-and-engine-gates.md)
 - [License research: Google sources and community precedent](../reports/research-261101-1652-android-sdk-license-for-mtplayer.md)
 - [Stock emulator gates (Phase 1 spike), 2026-11-01](../reports/spike-261101-1700-stock-emulator-gates.md)
+- [Phase 2 acceptance, 2026-11-02](../reports/phase-02-261101-2313-google-package-provisioning.md)
 - [Android SDK License](https://developer.android.com/studio/terms), §3.1,
   §3.2, §3.4 and §3.5.
 - The superseded MTPlayer MVP plan and its research stay in git history
@@ -346,3 +351,30 @@ The user answered the six questions of the Fable review in the
 The review's doc fixes were applied to this plan, to phases 1, 2, 4 and 7,
 and to the report: the full Android ID reset recipe, a configurable port
 base of 5600 or higher, and the Phase 4 design notes from the spike.
+
+### Session 6, 2026-11-02: Phase 2 acceptance and final review
+
+All ten acceptance checks passed against the real endpoints, and the evidence is
+in the git-ignored `.tmp/evidence/phase2/` folder. The full install made 3
+downloads (1.31 GB) in 58 s, the root booted to `sys.boot_completed=1` in 64.7 s,
+a second run downloaded nothing, and an independent compare found no difference
+in 406 files. See the
+[acceptance report](../reports/phase-02-261101-2313-google-package-provisioning.md).
+
+1. **Acceptance by flags.** The user accepted both licenses with
+   `--accept <id>=<sha1> --on-behalf-of personal` on 2026-11-02, for the scratch
+   homes under `.tmp/` only. The interactive prompt was therefore not driven end
+   to end, so Phase 2 stays in review until the user's one-minute terminal check.
+2. **GPU driver caches.** The final review judged the NVIDIA cache updates seen
+   during boot to be the driver's own, so criterion 8 now says they are outside
+   uninstall. The link to the emulator rests on timing only. A future snapshot
+   showing new per-application files there would reopen this, and they would then
+   be listed in the README, still without deleting them.
+3. **Final review fixes.** A kept zip that fails its check is now discarded with a
+   warning, removing a directory without a record now gives its own error, and a
+   loopback client ignores proxy variables so that `cargo test` works behind a
+   proxy. Production traffic still honours the proxy variables. The 232 offline
+   tests and 4 small live tests passed after these fixes, and the 1.3 GB acceptance
+   was not repeated, because fixture tests cover those paths.
+4. **Uninstall.** License records and the current Magisk binary stay after
+   `mtp sdk remove`. This is by design, and Phase 7's uninstall owns deleting them.
